@@ -98,7 +98,7 @@ const char MTR_COLS[ MTR_NR_COLS ][10] = {
 };
 
 const int MTR_COL_LENGTH[ MTR_NR_COLS ] = {
-		190, 30, 50, 40, 40, 50, 50, 50, 50
+		390, 30, 50, 40, 40, 50, 50, 50, 50
 };
 
 int gettimeofday(struct timeval* tv, struct timezone *tz);

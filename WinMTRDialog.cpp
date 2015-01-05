@@ -661,27 +661,28 @@ void WinMTRDialog::OnCTTC()
 	
 	int nh = wmtrnet->GetMax();
 	
-	strcpy(f_buf,  "|------------------------------------------------------------------------------------------|\r\n");
-	sprintf(t_buf, "|                                      WinMTR statistics                                   |\r\n");
-	strcat(f_buf, t_buf);
-	sprintf(t_buf, "|                       Host              -   %%  | Sent | Recv | Best | Avrg | Wrst | Last |\r\n" ); 
-	strcat(f_buf, t_buf);
-	sprintf(t_buf, "|------------------------------------------------|------|------|------|------|------|------|\r\n" ); 
-	strcat(f_buf, t_buf);
-
+	//strcpy(f_buf,  "|------------------------------------------------------------------------------------------|\r\n");
+	//sprintf(t_buf, "|                                      WinMTR statistics                                   |\r\n");
+	//strcat(f_buf, t_buf);
+	//sprintf(t_buf, "|                       Host              -   %%  | Sent | Recv | Best | Avrg | Wrst | Last |\r\n" ); 
+	//strcat(f_buf, t_buf);
+	//sprintf(t_buf, "|------------------------------------------------|------|------|------|------|------|------|\r\n" ); 
+	//strcat(f_buf, t_buf);
+    sprintf(t_buf, "Host Lost Sent Recv Best Avrg Wrst Last\r\n");
+    strcat(f_buf, t_buf);
 	for(int i=0;i <nh ; i++) {
 		wmtrnet->GetName(i, buf);
 		if(strcmp(buf,"")==0) strcpy(buf,"No response from host");
 		
-		sprintf(t_buf, "|%40s - %4d | %4d | %4d | %4d | %4d | %4d | %4d |\r\n" , 
+		sprintf(t_buf, "%s %4d %4d %4d %4d %4d %4d %4d\r\n" , 
 					buf, wmtrnet->GetPercent(i),
 					wmtrnet->GetXmit(i), wmtrnet->GetReturned(i), wmtrnet->GetBest(i),
 					wmtrnet->GetAvg(i), wmtrnet->GetWorst(i), wmtrnet->GetLast(i));
 		strcat(f_buf, t_buf);
 	}	
 	
-	sprintf(t_buf, "|________________________________________________|______|______|______|______|______|______|\r\n" ); 
-	strcat(f_buf, t_buf);
+	//sprintf(t_buf, "|________________________________________________|______|______|______|______|______|______|\r\n" ); 
+	//strcat(f_buf, t_buf);
 
 	CString cs_tmp((LPCSTR)IDS_STRING_SB_NAME);
 	strcat(f_buf, "   ");
@@ -1197,6 +1198,7 @@ void WinMTRDialog::Transit(STATES new_state)
 void WinMTRDialog::OnTimer(UINT_PTR nIDEvent)
 {
 	static unsigned int call_count = 0;
+    static unsigned int trace_count = 0;
 	call_count += 1;
 
 	if(state == EXIT && WaitForSingleObject(traceThreadMutex, 0) == WAIT_OBJECT_0) {
@@ -1208,12 +1210,21 @@ void WinMTRDialog::OnTimer(UINT_PTR nIDEvent)
 	if( WaitForSingleObject(traceThreadMutex, 0) == WAIT_OBJECT_0 ) {
 		ReleaseMutex(traceThreadMutex);
 		Transit(IDLE);
-	} else if( (call_count % 10 == 0) && (WaitForSingleObject(traceThreadMutex, 0) == WAIT_TIMEOUT) ) {
+    } else if ((call_count % 10 == 0) && (WaitForSingleObject(traceThreadMutex, 0) == WAIT_TIMEOUT)) {
 		ReleaseMutex(traceThreadMutex);
-		if( state == TRACING) Transit(TRACING);
-		else if( state == STOPPING) Transit(STOPPING);
-	}
-
+        if (state == TRACING) {
+            Transit(TRACING);
+            trace_count++;
+        }
+        else if (state == STOPPING) {
+            Transit(STOPPING);
+            trace_count = 0;
+        }
+    }
+    if (trace_count > 5) {
+        Transit(STOPPING);
+        trace_count = 0;
+    }
 	CDialog::OnTimer(nIDEvent);
 }
 
