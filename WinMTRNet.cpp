@@ -468,7 +468,7 @@ FILE *fp, 指定文件指针
 unsigned long start, 指定文件偏移量
 char **string) 用来存放将读取字符串的字符串空间的首地址
 */
-int getString(FILE *fp, unsigned long start, char **string)
+int getString(FILE *fp, unsigned long start, char *string)
 {
     unsigned long i = 0;
     char val;
@@ -478,8 +478,7 @@ int getString(FILE *fp, unsigned long start, char **string)
     {
         val = fgetc(fp);
         /*依次放入用来存储的字符串空间中*/
-        *(*string + i) = val;
-        i++;
+        string[i++] = val;
     } while (val != 0x00);
     /*返回字符串长度*/
     return i;
@@ -492,7 +491,7 @@ unsigned long start, 指定IP在索引中的文件偏移量
 char **country, 用来存放国家位置的字符串空间的首地址
 char **location) 用来存放地域位置的字符串空间的首地址
 */
-void getAddress(FILE *fp, unsigned long start, char **country, char **location)
+void getAddress(FILE *fp, unsigned long start, char *country, char *location)
 {
     unsigned long redirect_address, counrty_address, location_address;
     char val;
@@ -611,11 +610,8 @@ unsigned long putAll(FILE *fp, FILE *out, unsigned long index_start, unsigned lo
 {
     unsigned long i, count = 0;
     unsigned long start_ip, end_ip;
-    char *country;
-    char *location;
-
-    country = (char*)malloc(255);
-    location = (char*)malloc(255);
+    char country[MAXBUF];
+    char location[MAXBUF];
 
     /*此处的7，是因为一条索引记录的长度是7*/
     for (i = index_start; i<index_end; i += 7)
@@ -634,7 +630,7 @@ unsigned long putAll(FILE *fp, FILE *out, unsigned long index_start, unsigned lo
         fprintf(out, "%d.%d.%d.%d", (end_ip & 0xFF000000) >> 0x18, \
 
             (end_ip & 0x00FF0000) >> 0x10, (end_ip & 0x0000FF00) >> 0x8, end_ip & 0x000000FF);
-        getAddress(fp, getValue(fp, i + 4, 3), &country, &location);
+        getAddress(fp, getValue(fp, i + 4, 3), country, location);
         fprintf(out, "\t%s\t%s\n", country, location);
         count++;
     }
@@ -708,19 +704,18 @@ void DnsResolverThread(void *p)
     //phent = gethostbyaddr( (const char*)&haddr, sizeof(int), AF_INET);
     FILE *fp;
     unsigned long index_start, index_end, current;
-    char *country;
-    char *location;
-    country = (char*)malloc(MAXBUF);
-    location = (char*)malloc(MAXBUF);
-
+	char country[MAXBUF] = {0};
+	char location[MAXBUF] = {0};
     fp = fopen(QQWRY, "rb");
-    
-    getHead(fp, &index_start, &index_end);
-    getAddress(fp, getValue(fp, index_end + 4, 3), &country, &location);
-    //搜索IP在索引区域的条目的偏移量
-    current = searchIP(fp, index_start, index_end, addr);
-    //获取该IP对因的国家地址和地域地址
-    getAddress(fp, getValue(fp, current + 4, 3), &country, &location);
+	if (fp) {
+		getHead(fp, &index_start, &index_end);
+		getAddress(fp, getValue(fp, index_end + 4, 3), country, location);
+		//搜索IP在索引区域的条目的偏移量
+		current = searchIP(fp, index_start, index_end, addr);
+		//获取该IP对因的国家地址和地域地址
+		getAddress(fp, getValue(fp, current + 4, 3), country, location);
+		fclose(fp);
+	}
     std::string l = std::string(location);
     std::string c = std::string(country);
     std::string h;
@@ -732,7 +727,6 @@ void DnsResolverThread(void *p)
     writable[h.size()] = '\0';
     wn->SetName(dnt->index, writable);
     delete p;
-    fclose(fp);
     TRACE_MSG("DNS resolver thread stopped.");
     _endthread();
 }
